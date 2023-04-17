@@ -7,14 +7,28 @@ import numpy as np
 import librosa
 import subprocess
 import librosa.display
+import soundfile as sf
+
+
+
 
 #probs only used for rendering video
 import cv2
 
 #load json of shows
 
+### TODO List ###
+# Parser
+# write docstrings
+# proper time conversion
+
+
+
+
+
 ## TODO Fxi this for the unittests
 def json_to_pandas(json_path, jsontype=None):
+    """Loads a json file into a pandas dataframe"""
     if jsontype == None:
         jsontype= "shows"
     with open(json_path, "r") as f:
@@ -24,6 +38,7 @@ def json_to_pandas(json_path, jsontype=None):
     return df
 
 def pandas_to_json(df, json_path, jsontype="shows"):
+    """Saves a pandas dataframe to a json file"""
     dict = {jsontype: df.to_dict(orient="records")}
 
     with open(json_path, "w") as f:
@@ -32,6 +47,7 @@ def pandas_to_json(df, json_path, jsontype="shows"):
 
 #add shows from df to new dictionary as images
 def image_to_dict(df, folder="RAW"):
+    """Loads images from a folder into a dictionary"""
     image_dict = {}
     for i in range(len(df)-1):
         df_row = df.iloc[i]
@@ -41,8 +57,9 @@ def image_to_dict(df, folder="RAW"):
 
 #save images from dictionary as pngs without json
 
-### TODO NAMES!!!! or show names AGHHHHH this has become too complicated fuck
+### TODO NAMES!!!! or show names AGHHHHH this has become complicated fuck
 def save_images_from_dict(show_image_dict, df=None, folder="custom/shows"):
+    """Saves images from dictionary using file names from dataframe if present"""
     for show_name, image in show_image_dict.items():
         if df is not None:
             row =  df.loc[df['showName'] == show_name]
@@ -55,13 +72,13 @@ def save_images_from_dict(show_image_dict, df=None, folder="custom/shows"):
 
 # get frame rate easily
 def df_get_frameRate(df, name):
-    #gets framerate from df
+    """Returns framerate from a named show in a given dataframe"""
     df = df[df["showName"] == name]
     return df["frameRate"][0]
 
 
 def convert_show_framerate(show_image, dict=None, old_frameRate=None, new_frameRate=64):
-    #converts images as nparray to new framerate by scaling the axes
+    """Convert framerate of show iamge from a given dictionary to new framerate, defualting to 64"""
     if old_frameRate == None:
         raise ValueError("Set old_frameRate")
 
@@ -79,7 +96,7 @@ def convert_show_framerate(show_image, dict=None, old_frameRate=None, new_frameR
 
 ### TODO ### Time conversion - TEST if it works - add beats to frames
 def show_seconds_to_frames(seconds, frameRate=64, BPM=None):
-    #converts times in seconds to frames for light show - assumes frameRate is 64
+    """Converts seconds to frames for a given framerate and BPM"""
     if BPM == None:
         return "Set BPM"
     framesperbeat = frameRate/4
@@ -92,7 +109,7 @@ def show_seconds_to_frames(seconds, frameRate=64, BPM=None):
     return nframes.astype(int)
 
 def beats_to_seconds(beats, BPM=None):
-    #converts beats to seconds
+    """Converts beats to seconds for a given BPM"""
     if BPM == None:
         return "Set BPM"
     secondsperbeat = 60/BPM
@@ -102,7 +119,7 @@ def beats_to_seconds(beats, BPM=None):
     return seconds.astype(float)
 
 def show_beats_to_frames(beats, frameRate=64, BPM=None):
-    #converts beats to frames
+    """Converts number of beats to number of frames for a given framerate and BPM"""
     if BPM == None:
         return "Set BPM"
     seconds = beats_to_seconds(beats, BPM)
@@ -115,22 +132,22 @@ def show_beats_to_frames(beats, frameRate=64, BPM=None):
 
 #covnerts mp3 to wav and loads it
 def convert_mp3_to_wav(mp3path, wavpath=None):
+    """Converts mp3 to wav and loads it, uses same name if no wavpath is given"""
     if wavpath == None:
         wavpath = mp3path.replace(".mp3", ".wav")
     subprocess.call(['ffmpeg', '-y', '-i', mp3path , wavpath])
     
     return librosa.load(wavpath)
 
-#load wav
 def load_wav(path, start=None, stop=None):
-    ## TO DO: add start and stop regions
+    """Loads a wav file from a given path"""
+    ## TODO: add time conversions
     y, sr = librosa.load(path)
     return y[start:stop], sr
 
 #visualise waveform
 def visualise_audio(audio, start=None, stop=None):
-    ## TO DO: add start and stop regions
-
+    ## TODO: add time conversions
     try:
         y, sr = librosa.load(audio)
     except:
@@ -142,7 +159,9 @@ def visualise_audio(audio, start=None, stop=None):
     librosa.display.waveshow(y, sr=sr)
 
 def visualise_spectrogram(audio, start=None, stop=None):
-    ## TO DO: add start and stop regions
+    """Visualises a spectrogram of a given audio file"""
+    ## TODO: add start and stop regions
+    ### TODO add config file for parameters
     try:
         y, sr = librosa.load(audio)
     except:
@@ -158,9 +177,10 @@ def visualise_spectrogram(audio, start=None, stop=None):
 
 ### Import and visualise lighting sequences
 
-#import lighting sequences
 def load_lighting_sequence(path, folder="RAW"):
-    if folder != None:
+    """Loads a lighting sequence from a given path and root folder"""
+    ### TODO make this more general - add an else statement for folder is none in case no folder is given
+    if folder is not None:
         path = os.path.join(folder, path)
     img = iio.imread(path)
     return img
@@ -168,8 +188,9 @@ def load_lighting_sequence(path, folder="RAW"):
 #visualise lighting sequence
 
 def visualise_lighting_sequence_object(img, dict=None):
+    """Plots a lighting sequence image object"""
     # works either with an image object or image from dictionary
-    ### add more customisations
+    ### TODO add more customisations
     plt.figure(figsize=(7,3))
 
     try:
@@ -185,12 +206,15 @@ def visualise_lighting_sequence_object(img, dict=None):
 
 #create show sequence segments
 def show_segment(show, start=None, stop=None):
-    # takes show image nnparray and returns segment of show
+    """Takes a show image and returns a segment of it"""
+    # TODO - add time conversions
     show = show[start:stop,:,:]
     return show
 
 #concatenate show segments
 def concatenate_show_units(show_list):
+    """Takes a list of show images and concatenates them to produce a show sequence"""
+    # We can make this more flexible later by not having the user create the segments first
     # takes list of show image nparray and concatenates them to produce show sequence
     show_sequence = np.concatenate(show_list, axis=1)
     return show_sequence
@@ -311,6 +335,7 @@ class Show_library:
 ### class for lighting system
 #holds library of lights
 # TODO give default positions
+
 class Light_show_setup:
     def __init__(self, numLights=None, json_path=None, folder=None) -> None:
         if numLights==None:
@@ -364,7 +389,7 @@ class Light_show_setup:
         self.df = self.df[self.df["name"] != name]
 
     def save_library(self, json_path, output_folder="custom"):
-        
+        # TODO check that this actually works - not sure if this works for 
         pandas_to_json(self.df, json_path, jsontype="lights")
         output_folder = os.path.join(output_folder, "lights")
 
@@ -485,10 +510,7 @@ class Show_sequence:
     def visualise_sequence(self, start=None, stop=None):
             visualise_lighting_sequence_object(self.show_sequence)           
 
-    def save_sequence(self, path):
-        ### TODO add in json file
-        iio.imwrite(path, self.show_sequence)
-        pass
+
     
     ### TODO ### -> complete show sequence to show both audio and lighting on the same axes
     ### TIME CONVERSION!!!
@@ -497,7 +519,7 @@ class Show_sequence:
 
     ### TODO ### -> finish render video
     # Make lighting setup
-    def render_show(self, path, Light_show_setup, start=None, stop=None, fps=30):
+    def render_show(self, output_path, Light_show_setup, start=None, stop=None, fps=30):
         if self.audio == None:
             raise Exception("No audio loaded")
 
@@ -528,19 +550,50 @@ class Show_sequence:
         for idx, frame in enumerate(output_light_frames):
             averaged_frames[idx] = np.mean(rendered_frames[frame:output_light_frames[idx+1]], axis=0)
 
-        self.avereged_frames = averaged_frames
-        return averaged_frames
-        #make video
+        self.averaged_frames = averaged_frames
 
-        ## try this with open cv
+        frames = np.uint8(self.averaged_frames*255)
 
-        #save video
+        height, width, _ = frames.shape
         
-        #add audio
+        #make video
+        audio_path = "temp_audio.wav"
+        print("Writing temp audio to file: "+audio_path)
+        sf.write(audio_path, self.audio, self.sr)
 
-        ## try this with ffmpeg
 
-        #save video with audio
+        command = ['ffmpeg',
+                   '-y',  # overwrite output file if it exists
+                   '-f', 'rawvideo',
+                   '-vcodec', 'rawvideo',
+                   '-s', f"{width}x{height}",
+                   '-pix_fmt', 'rgb24',
+                   '-r', f"{fps:.2f}",
+                   '-i', '-',
+                   '-i', audio_path,
+                   '-acodec', 'aac',
+                   '-vcodec', 'libx264',
+                   '-pix_fmt', 'yuv420p',
+                   '-preset', 'ultrafast',
+                   '-crf', '0',
+                   output_path]
+
+        # Start ffmpeg process and pass in frames and audio data
+        process = subprocess.Popen(command, stdin=subprocess.PIPE)
+
+        for idx, frame in enumerate(self.averaged_frames):
+            # Convert frame to bytes and pass to ffmpeg process
+            process.stdin.write(frame.tobytes())
+            print("Writing frame: "+str(idx)+" of "+str(len(self.averaged_frames)), end="\r")
+
+
+        process.stdin.close()
+        process.wait()
+
+        # Delete temporary audio file
+        os.remove(audio_path)
+
+        return output_path
 
 
 ### Create animated music video of sequence
